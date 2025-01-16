@@ -1,35 +1,42 @@
-local deathBall = script.Parent  -- A bola
-local pushForce = 200  -- Força que será aplicada para empurrar a bola
+-- Script Local para Defesa Automática (StarterCharacterScripts)
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local deathBall = workspace:WaitForChild("DeathBall")  -- Referência à bola no workspace
+local humanoid = character:WaitForChild("Humanoid")
+local defendRange = 15  -- Distância máxima para tentar defender a bola
+local defenseForce = 300  -- Força para empurrar a bola
+local moveSpeed = 20  -- Velocidade do movimento do personagem
 
--- Função para empurrar a bola
-local function pushBall(player)
-    -- Detectar o ponto de colisão (local onde o jogador tocou a bola)
-    local character = player.Character
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+-- Função para mover o personagem em direção à bola
+local function moveToBall()
+    while true do
+        local distanceToBall = (deathBall.Position - humanoidRootPart.Position).Magnitude
         
-        -- Calcular a direção para empurrar a bola para longe do jogador
-        local direction = (deathBall.Position - humanoidRootPart.Position).unit
-        
-        -- Aplicar a força na bola para empurrá-la
-        local bodyVelocity = deathBall:FindFirstChild("BodyVelocity")
-        if not bodyVelocity then
-            bodyVelocity = Instance.new("BodyVelocity")
-            bodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
-            bodyVelocity.Parent = deathBall
+        -- Verificar se o personagem está perto o suficiente da bola para defender
+        if distanceToBall <= defendRange then
+            -- Calcular a direção em que o personagem deve se mover (em direção à bola)
+            local direction = (deathBall.Position - humanoidRootPart.Position).unit
+            humanoid:MoveTo(deathBall.Position - direction * 2)  -- Mover o personagem para perto da bola, mas não sobrepor completamente
+            
+            -- Calcular a direção para empurrar a bola
+            local bodyVelocity = deathBall:FindFirstChild("BodyVelocity")
+            
+            -- Criar ou obter o BodyVelocity para empurrar a bola
+            if not bodyVelocity then
+                bodyVelocity = Instance.new("BodyVelocity")
+                bodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
+                bodyVelocity.Parent = deathBall
+            end
+            
+            -- Aplicar a força para desviar a bola
+            bodyVelocity.Velocity = (deathBall.Position - humanoidRootPart.Position).unit * defenseForce
         end
         
-        bodyVelocity.Velocity = direction * pushForce  -- Empurrar a bola
+        -- Aguardar um pouco antes de calcular novamente
+        wait(0.1)
     end
 end
 
--- Conectar a função ao evento Touched
-deathBall.Touched:Connect(function(hit)
-    local character = hit.Parent
-    if character:IsA("Model") and character:FindFirstChild("Humanoid") then
-        local player = game:GetService("Players"):GetPlayerFromCharacter(character)
-        if player then
-            pushBall(player)
-        end
-    end
-end)
+-- Iniciar a defesa automática
+spawn(moveToBall)
